@@ -1,0 +1,91 @@
+
+Platinum Project Operating Manual
+@author - Dave Slemon
+@version - 100
+@date - May 19, 2025
+
+
+I.  Python
+
+	a. Get from https://www.python.org/downloads/
+	b. Download & Install latest version - Python 3.13 or higher
+	   You need to see "Setup was successful"
+
+	c. install some python module(s) listed below
+		websocket-client, requests
+		
+		Go to cmd prompt and here's how to do a pip install:
+		C:\>cd C:\Users\User Setup\AppData\Local\Programs\Python\Python313\Scripts
+		pip install websocket-client
+		pip install requests
+		pip3 install mysql-connector-python
+
+		
+		
+II. IB Gateway
+
+	How to Lessons: https://www.interactivebrokers.com/campus/trading-course/ibkrs-client-portal-api/
+	
+	Documentation:  https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#introduction
+		
+	Install IB Gateway  ( ref video: https://youtu.be/t6IsvhxwLzw?si=Lz5Imk0k_ECWbM-K )
+	
+		a. download:  https://interactivebrokers.github.io/cpwebapi/quickstart
+		   click on AP Gateway and it will download, clientportal.gw.zip
+		   extract the zip
+		   
+		b. requires Java run time.  Check with cmd:  java -version
+		
+		c. run the gateway and get authenticated
+			open cmd prompt
+			cd Downloads\clientportal.gw
+			bin\run.bat root\conf.yaml
+			
+		d.  to login to the gateway, in a browser
+		       https://localhost:5000
+			   
+			   username:
+			   password:
+			   2-factor code:     {special note for input (all caps, no spaces):    ABC7Q7  }
+			   
+			   If you're successful, you must see:   Client login succeeds
+			
+			
+		e.  try this simple python program to see if everythings works, call the file:  auth_status.py
+				if the gateway is working you should see Fig 2.
+					--------------------------------------------------------------------------
+					import requests
+					import urllib3
+
+					urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+					def confirmStatus():
+						base_url = "https://localhost:5000/v1/api/"
+						endpoint = "iserver/auth/status"
+						
+
+						auth_req = requests.get(url=base_url+endpoint, verify=False)
+						print(auth_req)
+						print(auth_req.text)
+
+					if __name__ == "__main__":
+						confirmStatus()
+					--------------------------------------------------------------------------
+					 Figure 1:  auth_status.py
+
+
+					 
+					--------------------------------------------------------------------------
+					============= RESTART: C:\Users\User Setup\Downloads\auth_status.py ============
+					<Response [200]>
+					{"authenticated":true,"competing":false,"connected":true,"message":"","MAC":"F4:03:43:CD:BD:C0","serverInfo":{"serverName":"JisfC4029","serverVersion":"Build 10.36.1c, May 6, 2025 4:02:47 PM"},"hardware_info":"1446cc3c|F4:03:43:CD:BD:C0","fail":""}
+					--------------------------------------------------------------------------
+					Figure 2:  output from a successful auth_status.py run	
+								
+		
+
+		
+			
+
+	
+	
