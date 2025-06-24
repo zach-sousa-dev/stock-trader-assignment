@@ -3,7 +3,7 @@
 # version 1.1
 
 #loopDelay (controls rate of https calls to MMEngine) in milliseconds
-loopDelay = 2
+loopDelay = 7
 dataDirectory = "..\\data"
 logsDirectory = "..\\logs"
 
