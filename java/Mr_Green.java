@@ -1,4 +1,6 @@
 import java.time.LocalDate;
+import java.io.*;
+import java.util.*;
 
 /**
  * The Mr_Green class represents a trading strategy entity that decides whether to buy shares 
@@ -100,40 +102,56 @@ public class Mr_Green {
      * @return true if a buy action is taken; false otherwise.
      */
     public boolean is_buying() {
-        // Calculate how much the day's high and low differ (as a percentage of the low).
+        
+        double profit = 0.0;
+        double percent = 0.0;
         double spreadPercent = (q.getHigh() - q.getLow()) / q.getLow() * 100.0;
+        String msg="";
+        if (h.getAvgCost(symbol) > 0.000001) {
+            profit = (q.getPrice() - h.getAvgCost(symbol)) * numShares;
+            percent = (q.getPrice() - h.getAvgCost(symbol)) / h.getAvgCost(symbol) * 100.0;
+        }
+        else {
+            profit = 0.00;
+            percent = 0.00;
+        }
+        
 
-         // Get the previous day's high (or today's if dayNum == 0).
-        //String varname = "high";
-        //double prevDayHigh = plum.getValue(symbol, varname, dayNum - 1);
-      
+        
 
-        // Calculate gap from previous day's high to current price.
-        //double gap = (prevDayHigh - q.getPrice()) / prevDayHigh * 100.0;
-
-        // Log key values for debugging or later analysis.
-        //String msg = String.format("%d\t%.2f\t%.2f\t%.1f\t%.2f\t%.2f\t%.2f\t",
-        //    dayNum, q.getPrice(), spreadPercent, prevDayHigh, gap, q.getHigh(), q.getLow());
-        //Tools.log("green.txt", q.getDT(), msg);
-
+        // "message\tdayNum\tprice\tprofit\tpercent\tspread\thigh\tlow\t");
+        msg = String.format("Green sees\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f", dayNum, q.getPrice(), h.getAvgCost(symbol), profit, percent, spreadPercent, q.getHigh(), q.getLow());
+        Tools.log("green.txt", q.getDT(), msg);
+        
+        
+        
+        
         // ------------------------
         // Case G0: Late-day buy on day 4
         String fifteen_minutes_earlier = Tools.subtractMinutesFromTime(marketCloseTime,15);
         if ((dayNum == 4) &&
             (Tools.ConvertTimeToLong(theTime) >= Tools.ConvertTimeToLong(fifteen_minutes_earlier)) &&
             (Tools.ConvertTimeToLong(theTime) < Tools.ConvertTimeToLong(marketCloseTime))) {
-            h.openHolding(symbol, numShares, q.getPrice(), LocalDate.parse(theDate));
             reasonCode = "G0";
+            
+        
+            h.openHolding(symbol, numShares, q.getPrice(), LocalDate.parse(theDate));
+            
+            //here Rest API placeOrder goes here
+            
+            msg = String.format("Green buys, (%s) \t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f", reasonCode,dayNum, q.getPrice(), h.getAvgCost(symbol), profit, percent, spreadPercent, q.getHigh(), q.getLow());
+            Tools.log("green.txt", q.getDT(), msg);
+                                
             return true;
         }
 
    
+        
+        
         // ------------------------
-        // Case G3: 
-     
-        String msg = String.format("%d - Green sees %.2f, spreadPercent: %.2f", dayNum, q.getPrice(), spreadPercent);
-        Tools.log("green.txt", q.getDT(), msg);
+        // Case G3: Green    
         if (spreadPercent > 1.15) {
+            
             if (dayNum == 2 || dayNum == 3 || dayNum == 4) {
                 double x1 = plum.getValue(symbol,"high" ,dayNum-2);
                 double y1 = plum.getValue(symbol,"low"  ,dayNum-2);
@@ -142,27 +160,16 @@ public class Mr_Green {
                 double x3 = plum.getValue(symbol,"high" ,dayNum);
                 double y3 = plum.getValue(symbol,"low"  ,dayNum);
                 
-                boolean ok = Tools.HLx3(x1,x2,x3,y1,y2,y3);     //  changed from detecing fall off to now detect rises
-                //String message = String.format("spread: %.2f\tdayNum: %d\tx1: %.2f x2: %.2f x3: %.2f y1: %.2f y2: %.2f y3:%.2f ok: %b",spreadPercent,dayNum,x1,x2,x3,y1,y2,y3, ok);
-                //Tools.log("HLx3.txt", q.getDT(), message);
+                boolean ok = Tools.HLx3(x1,x2,x3,y1,y2,y3);
+
                 if (ok) {
-                                h.openHolding(symbol, numShares, q.getPrice(), LocalDate.parse(theDate));
-                                msg = String.format("%d - Green buys @ %.2f, spreadPercent: %.2f", dayNum, q.getPrice(), spreadPercent);
-                                Tools.log("green.txt", q.getDT(), msg);
                                 reasonCode = "G3";
+                                h.openHolding(symbol, numShares, q.getPrice(), LocalDate.parse(theDate));
+                                msg = String.format("Green buys, (%s) \t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f", reasonCode,dayNum, q.getPrice(), h.getAvgCost(symbol), profit, percent, spreadPercent, q.getHigh(), q.getLow());
+                                Tools.log("green.txt", q.getDT(), msg);
+                                
                                 return true;
                 }
-            }
-        }
-
-        // Case G4: buy if a new low is found on a later day
-        if(dayNum == 2 || dayNum == 3 || dayNum == 4) {
-            if(q.getPrice() < plum.getValue(symbol, "low", dayNum-1) && q.getPrice() < plum.getValue(symbol, "low", dayNum-2) && q.getPrice() < plum.getValue(symbol, "low", dayNum-3)) {
-                h.openHolding(symbol, numShares, q.getPrice(), LocalDate.parse(theDate));
-                msg = String.format("%d - Green buys @ %.2f", dayNum, q.getPrice());
-                Tools.log("green.txt", q.getDT(), msg);
-                reasonCode = "G4";
-                return true;
             }
         }
         
@@ -170,7 +177,20 @@ public class Mr_Green {
         // No buy signal.
         return false;
     }
+    
+    
+    //empties the green.txt file, but does not delete the file.  green.txt just stores activity by green 
+    public void clearFile() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter("..\\logs\\green.txt"))) {
+            // Truncate file by writing nothing
+        } catch (IOException e) {
+            System.err.println("Error clearing green file: " + e.getMessage());
+        }
+    }
 
+    
+    
+    
     /**
      * Returns a string summary of the current Mr_Green status, including potential profit
      * if there's an active holding.

@@ -12,6 +12,13 @@ import java.io.InputStreamReader;
 import java.net.NoRouteToHostException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.io.PrintWriter;
+import java.util.Date;
+import java.net.HttpURLConnection;
+
 
 /**
  * Financial Tools
@@ -119,26 +126,53 @@ public class Tools
     
     //all logs appear in the log folder
     //note: the message should be a tab delimited string
-    public static void log(String filename, String dateTime, String message) {
+    //      actualDT is the real time of day
+    //      dateTime, is based on the quote 
+    //
+    // returns the actualDT
+    //
+    public static String log(String filename, String dateTime, String message) {
         String theFileName = Tools.getConfig("logsDirectory") + "\\" + filename;
+        
+        DateTimeFormatter s_today_dt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime now = LocalDateTime.now();
+        String actualDT = now.format(s_today_dt);
+        
+        
         try {
             FileWriter out = new FileWriter(theFileName,true);
-            out.write(dateTime + "\t" + message + "\n");
+            out.write(actualDT+ "\t" + dateTime + "\t" + message + "\n");
             out.close();
+            return actualDT;
         }
         catch (IOException e) {
             System.out.println("File " + theFileName + " can not be written to.  Is their a log folder?");
+            
             e.printStackTrace();
+            return actualDT;
+        }
+       
+    }
+    
+    
+    
+    /**
+     * Logs a message to the LOG_FILE.
+     */
+    public static void log(String message) {
+        try (PrintWriter out = new PrintWriter(new FileWriter("errors.txt", true))) {
+            out.println(new Date() + " - " + message);
+        } catch (IOException e) {
+            System.err.println("Logging failed: " + e.getMessage());
         }
     }
     
     
     
-    
     public static long ConvertTimeToLong(String t) {
         if (t == null || !t.matches("\\d{2}:\\d{2}:\\d{2}")) {
-            System.out.println("Error parsing string: " + t);
-            throw new IllegalArgumentException("Input must be in the format HH:mm:ss");
+            
+            throw new IllegalArgumentException("ConvertTimeToLong Error 16: Input time must be in the format HH:mm:ss  Received: ["+t+"]");
         }
 
         String[] parts = t.split(":");
@@ -179,6 +213,8 @@ public class Tools
         return false;
     }
   
+    //  ZS UPDATE
+
     /**
      * @author Eli Wood
      */
@@ -192,5 +228,154 @@ public class Tools
 
         return time;
     }
+
+    // END ZS UPDATE
+    
+    
+    
+    
+    public static String getValidQuoteTime(Vector<String> resp) {
+    if (resp != null && resp.size() > 0) {
+        String dateTime = resp.get(0).trim();  // e.g., "2022-08-22 09:31:09"
+        int spaceIndex = dateTime.indexOf(' ');
+        if (spaceIndex != -1 && spaceIndex + 1 < dateTime.length()) {
+            return dateTime.substring(spaceIndex + 1);  // returns "09:31:09"
+        }
+    }
+    return null;  // if resp is null, empty, or malformed
+    }
+    
+    
+    
+    
+    /**
+     * Adds a specified number of minutes to a given time string in "HH:mm:ss" format.
+     *
+     * @param prevTime the original time, e.g. "09:25:00"
+     * @param minutesToAdd number of minutes to add
+     * @return the new time string in "HH:mm:ss" format
+     */
+    public static String addMinutesToTime(String prevTime, int minutesToAdd) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+        LocalTime time = LocalTime.parse(prevTime, formatter);
+        LocalTime newTime = time.plusMinutes(minutesToAdd);
+        return newTime.format(formatter);
+    }
+    
+    
+    
+    
+    
+    //There are two vector posts, this one is for URLs
+    public static Vector<String> VectorURLPost(String machine, String message) {
+        Vector<String> data = new Vector<>(0);
+        try {
+            URL EregURL = new URL(machine);
+            URLConnection URLConn = EregURL.openConnection();
+            URLConn.setConnectTimeout(1500);
+            URLConn.setDoInput(true);
+            URLConn.setDoOutput(true);
+
+            try (OutputStreamWriter out = new OutputStreamWriter(URLConn.getOutputStream())) {
+                out.write(message);
+                out.flush();
+            }
+
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(URLConn.getInputStream()))) {
+                String temp_buff;
+                while ((temp_buff = in.readLine()) != null) {
+                    if (temp_buff.length() > 0)
+                        data.add(temp_buff);
+                }
+            }
+
+            return data;
+        } catch (NoRouteToHostException e) {
+            System.out.println("VectorPost Error: 101 No Route to Host");
+            return null;
+        } catch (Exception e) {
+            System.out.println("VectorPost Error: 100 Can't reach MMEngine API");
+            return null;
+        }
+    }    
+    
+    
+    
+    
+    
+    //There are two vector posts, this one is for URIs, ie. REST APIs
+    public static Vector<String> VectorURIPost(String uri) {
+        Vector<String> data = new Vector<>(0);
+
+       
+
+        try {
+            URL url = new URL(uri);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(1500);
+            conn.setRequestMethod("GET");
+            conn.setDoInput(true);
+            
+            
+
+            // Read JSON response
+            StringBuilder response = new StringBuilder();
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    response.append(line);
+                }
+            }
+
+            // Extract the quote object manually
+            String json = response.toString();
+            int start = json.indexOf("\"quote\"");
+            if (start == -1) return data;
+
+            int braceStart = json.indexOf('{', start);
+            int braceEnd = json.lastIndexOf('}');
+            if (braceStart == -1 || braceEnd == -1 || braceEnd <= braceStart) return data;
+
+            String quoteBody = json.substring(braceStart + 1, braceEnd);
+
+            String[] fields = quoteBody.split(",");
+            for (String field : fields) {
+                String[] pair = field.split(":", 2);
+                if (pair.length == 2) {
+                    String value = pair[1].trim();
+
+                    // Manually remove all quotes
+                    StringBuilder clean = new StringBuilder();
+                    for (int i = 0; i < value.length(); i++) {
+                        char ch = value.charAt(i);
+                        if (ch != '"') {
+                            clean.append(ch);
+                        }
+                    }
+
+                    // Remove any trailing brace and trim again
+                    value = clean.toString().replace("}", "").trim();
+
+                    data.add(value);
+                }
+            }
+
+            return data;
+
+        } catch (NoRouteToHostException e) {
+            System.out.println("VectorPost Error: 101 No Route to Host");
+            return null;
+        } catch (Exception e) {
+            System.out.println("VectorPost Error: 100 Can't reach MMEngine API");
+            e.printStackTrace();  // Show error details
+            return null;
+        }
+    }  
+  
+  
+  
+
+    
+    
   
 }

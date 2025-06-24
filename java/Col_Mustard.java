@@ -1,5 +1,6 @@
 import java.time.LocalDate;
-
+import java.io.*;
+import java.util.*;
 /**
  * The Col_Mustard class represents a trading strategy entity 
  * that decides whether to close holdings (i.e., sell shares) 
@@ -101,36 +102,46 @@ public class Col_Mustard {
     public boolean is_buying() {
         // Calculate spread percentage (high - low relative to low).
         double spreadPercent = (q.getHigh() - q.getLow()) / q.getLow() * 100.0;
+        double profit = 0.0;
+        double percent = 0.0;
+        String msg = "";
+        
+        if (h.getAvgCost(symbol) > 0.000001) {
+            profit = (q.getPrice() - h.getAvgCost(symbol)) * numShares;
+            percent = (q.getPrice() - h.getAvgCost(symbol)) / h.getAvgCost(symbol) * 100.0;
+        }
+        else {
+            profit = 0.00;
+            percent = 0.00;
+        }
+        
+        
 
-        // Get the previous day's high (or today's if dayNum == 0).
-        //String varname = "high";
-        //double prevDayHigh = plum.getValue(symbol, varname, dayNum - 1);
-
-        // Calculate the gap from previous day's high to current price.
-        //double gap = (prevDayHigh - q.getPrice()) / prevDayHigh * 100.0;
-
-        // Log details to mustard.txt for tracking/debugging.
-        //String msg = String.format("%d\t%.2f\t%.2f\t%.1f\t%.2f\t%.2f\t%.2f\t",
-         //       dayNum, q.getPrice(), spreadPercent, prevDayHigh, gap, q.getHigh(), q.getLow());
-        //.log("mustard.txt", q.getDT(), msg);
-
+        // "message\tdayNum\tprice\tprofit\tpercent\tspread\thigh\tlow\t");
+        msg = String.format("Mustard sees\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f", dayNum, q.getPrice(), h.getAvgCost(symbol), profit, percent, spreadPercent, q.getHigh(), q.getLow());
+        Tools.log("mustard.txt", q.getDT(), msg);
+        
+                
+        
         // ------------------------
         // Case M0: Late-day close on day 4
         String fifteen_minutes_earlier = Tools.subtractMinutesFromTime(marketCloseTime,15);
         if ((dayNum == 4) &&
             (Tools.ConvertTimeToLong(theTime) >= Tools.ConvertTimeToLong(fifteen_minutes_earlier)) &&
             (Tools.ConvertTimeToLong(theTime) < Tools.ConvertTimeToLong(marketCloseTime))) {
-            h.closeHolding(symbol, getNumShares(), q.getPrice(), LocalDate.parse(theDate));
-            reasonCode = "M0";
+                reasonCode = "M0";
+                h.closeHolding(symbol, getNumShares(), q.getPrice(), LocalDate.parse(theDate));
+ 
+                msg = String.format("Mustard buys, (%s) \t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f", reasonCode,dayNum, q.getPrice(), h.getAvgCost(symbol), profit, percent, spreadPercent, q.getHigh(), q.getLow());
+                Tools.log("mustard.txt", q.getDT(), msg);
             return true;
         }
 
         
+
         double low2 = plum.getValue(symbol,"low"  ,dayNum-2);  //ROCKY
         double low1 = plum.getValue(symbol,"low"  ,dayNum-1);
         double low0 = plum.getValue(symbol,"low"  ,dayNum);
-        String msg = String.format("%d - Mustard sees %.2f, spreadPercent: %.2f  low2: %.2f  low1: %.2f  low0: %.2f", dayNum, q.getPrice(), spreadPercent, low2, low1, low0);
-        Tools.log("mustard.txt", q.getDT(), msg);
         // ------------------------
         // Case G3: 
         if (spreadPercent > 1.15) {
@@ -142,16 +153,14 @@ public class Col_Mustard {
                 double x3 = plum.getValue(symbol,"high" ,dayNum);
                 double y3 = plum.getValue(symbol,"low"  ,dayNum);
                 
-                boolean ok = Tools.HLx3(x1,x2,x3,y1,y2,y3);     //  changed from detecing fall off to now detect rises
-                String message = String.format("spread: %.2f\tdayNum: %d\tx1: %.2f x2: %.2f x3: %.2f y1: %.2f y2: %.2f y3:%.2f ok: %b",spreadPercent,dayNum,x1,x2,x3,y1,y2,y3, ok);
-                Tools.log("HLx3.txt", q.getDT(), message);
+                boolean ok = Tools.HLx3(x1,x2,x3,y1,y2,y3);
+
                 if (ok) {
-                    
+                                reasonCode = "M3";
                                 h.closeHolding(symbol, numShares, q.getPrice(), LocalDate.parse(theDate));
                                 msg = String.format("%d - Mustard covers short @ %.2f, spreadPercent: %.2f", dayNum, q.getPrice(), spreadPercent);
                                 Tools.log("mustard.txt", q.getDT(), msg);
-                                reasonCode = "M3";
-                              
+                                
                                 return true;
                 }
             }
@@ -161,6 +170,24 @@ public class Col_Mustard {
         return false;
     }
 
+    
+    
+     
+    //empties the mustard.txt file, but does not delete the file.  mustard.txt just stores activity by mustard
+    public void clearFile() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter("..\\logs\\mustard.txt"))) {
+            // Truncate file by writing nothing
+        } catch (IOException e) {
+            System.err.println("Error clearing mustard file: " + e.getMessage());
+        }
+    }
+
+    
+       
+    
+    
+    
+    
     /**
      * Returns a string summary of the current Col_Mustard status, 
      * including potential profit (minus commission cost) if there’s an active holding.

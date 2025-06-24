@@ -1,4 +1,6 @@
 import java.time.LocalDate;
+import java.io.*;
+import java.util.*;
 
 /**
  * The Miss_Scarlet class represents a trading strategy entity that decides whether 
@@ -33,7 +35,9 @@ public class Miss_Scarlet {
     private double st_spreadPercent = Double.parseDouble(Tools.getConfig("SCARLET_ST_PERCENT"));
     private double st_closeness = Double.parseDouble(Tools.getConfig("SCARLET_ST_CLOSENESS"));
 
+    // ZS UPDATE
     private final boolean DEBUG_MODE = false;
+    // END ZS UPDATE
 
     /**
      * Constructor for Miss_Scarlet.
@@ -112,16 +116,30 @@ public class Miss_Scarlet {
      * @return true if a sell action is taken; false otherwise.
      */
     public boolean is_selling() {
-        double avgCost = h.getAvgCost(symbol);
-        double profit = (q.getPrice() - avgCost) * numShares;
-        double percent = ((q.getPrice() - avgCost) / avgCost) * 100;
+        double profit = 0.0;
+        double percent = 0.0;
         double spreadPercent = (q.getHigh() - q.getLow()) / q.getLow() * 100.0;
+        String msg="";
+        if (h.getAvgCost(symbol) > 0.000001) {
+            profit = (q.getPrice() - h.getAvgCost(symbol)) * numShares;
+            percent = (q.getPrice() - h.getAvgCost(symbol)) / h.getAvgCost(symbol) * 100.0;
+        }
+        else {
+            profit = 0.00;
+            percent = 0.00;
+        }
+                
+        
 
-        // Log key stats to scarlet.txt for tracking.
-        String msg = String.format("%d\t%.2f\t%.2f\t%.1f\t%.2f\t%.2f\t%.2f",
-                dayNum, q.getPrice(), profit, percent, spreadPercent, q.getHigh(), q.getLow());
+
+        
+
+        msg = String.format("Scarlet sees\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f", dayNum, q.getPrice(), h.getAvgCost(symbol), profit, percent, spreadPercent, q.getHigh(), q.getLow());
         Tools.log("scarlet.txt", q.getDT(), msg);
-
+        
+        
+        
+        
         // ------------------------
         // Case S0: Late-day sell on day -1
         String fifteen_minutes_earlier = Tools.subtractMinutesFromTime(marketCloseTime,15);
@@ -145,6 +163,7 @@ public class Miss_Scarlet {
             }
         }
 
+        //  ZS UPDATE
         // --Zach's cases--
 
         //  CASE S1 - an early bail out case
@@ -216,6 +235,7 @@ public class Miss_Scarlet {
         }
 
         // --End of Zach's cases--
+        // END ZS UPDATE
 
         // if(plum.isTrendingUp() && zPercent <= SELL_WITHIN_PERCENT && zPercent > -SELL_WITHIN_PERCENT && plum.getTrendAverage() >= plum.calculateAverageWithNewFirst(q) && (dayNum == -7 || dayNum == -6)) {
         //     h.closeHolding(symbol, getNumShares(), q.getPrice(), LocalDate.parse(theDate));
@@ -251,6 +271,23 @@ public class Miss_Scarlet {
         return false;
     }
 
+    
+
+    
+   //empties the scarlet.txt file, but does not delete the file.  scarlet.txt just stores activity by scarlet
+    public void clearFile() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter("..\\logs\\scarlet.txt"))) {
+            // Truncate file by writing nothing
+        } catch (IOException e) {
+            System.err.println("Error clearing scarlet file: " + e.getMessage());
+        }
+    }
+
+        
+    
+    
+    
+    
     /**
      * Returns a string summary of the current Miss_Scarlet status, including potential profit 
      * if there's an active holding.

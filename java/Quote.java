@@ -56,7 +56,10 @@ public class Quote
         return myDT;
     }
     
-    
+    public String getSource() {
+        return mySource;
+    }
+        
     
     public String getTime() {
         // Normalize by replacing '.' with ' '
@@ -103,9 +106,7 @@ public class Quote
         return myPrice;
     }
 
-    public String getSource() {
-        return mySource;
-    }
+  
 
     public long getVolume() {
         return myVolume;

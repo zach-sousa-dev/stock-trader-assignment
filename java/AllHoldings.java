@@ -10,8 +10,7 @@ public class AllHoldings {
     private ArrayList<SingleHolding> syntheticClosures = new ArrayList<>();
 
     public void openHolding(String symbol, int numShares, double avgCost, LocalDate dateOpened) {
-        if (numShares != 0)
-            holdings.add(new SingleHolding(symbol, numShares, avgCost, dateOpened));
+        if (numShares != 0) holdings.add(new SingleHolding(symbol, numShares, avgCost, dateOpened));
     }
 
     public boolean closeHolding(String symbol, int sharesToClose, double closingPrice, LocalDate dateClosed) {
@@ -22,8 +21,7 @@ public class AllHoldings {
         ArrayList<SingleHolding> closedList = new ArrayList<>();
 
         for (SingleHolding pos : holdings) {
-            if (sharesRemaining <= 0)
-                break;
+            if (sharesRemaining <= 0) break;
             if (pos.getSymbol().equals(symbol) && pos.isOpen() && Integer.signum(pos.getNumShares()) == closeSign) {
                 int posSharesAbs = Math.abs(pos.getNumShares());
                 if (posSharesAbs <= sharesRemaining) {
@@ -32,8 +30,7 @@ public class AllHoldings {
                     sharesRemaining -= posSharesAbs;
                 } else {
                     pos.reduceShares(sharesRemaining, closingPrice, dateClosed);
-                    SingleHolding clone = new SingleHolding(pos.getSymbol(), sharesRemaining * closeSign,
-                            pos.getAvgCost(), pos.getDateOpened());
+                    SingleHolding clone = new SingleHolding(pos.getSymbol(), sharesRemaining * closeSign, pos.getAvgCost(), pos.getDateOpened());
                     clone.close(closingPrice, dateClosed);
                     clone.markSynthetic();
                     syntheticClosures.add(clone);
@@ -50,8 +47,7 @@ public class AllHoldings {
             double remainingAdjustment = totalAdjustment;
 
             for (SingleHolding pos : closedList) {
-                if (remainingAdjustment <= 0)
-                    break;
+                if (remainingAdjustment <= 0) break;
                 double maxApply = remainingAdjustment;
                 pos.applyDividendAdjustment(maxApply);
                 remainingAdjustment -= maxApply;
@@ -78,8 +74,7 @@ public class AllHoldings {
     public void results() {
         ArrayList<Double> profitList = new ArrayList<>();
         for (SingleHolding h : holdings) {
-            if (!h.isOpen())
-                profitList.add(h.getProfit());
+            if (!h.isOpen()) profitList.add(h.getProfit());
         }
         for (SingleHolding s : syntheticClosures) {
             profitList.add(s.getProfit());
@@ -96,28 +91,21 @@ public class AllHoldings {
 
     public double totalProfit(String symbol) {
         return holdings.stream().filter(h -> h.getSymbol().equals(symbol)).mapToDouble(SingleHolding::getProfit).sum()
-                + syntheticClosures.stream().filter(h -> h.getSymbol().equals(symbol))
-                        .mapToDouble(SingleHolding::getProfit).sum();
+             + syntheticClosures.stream().filter(h -> h.getSymbol().equals(symbol)).mapToDouble(SingleHolding::getProfit).sum();
     }
 
     public double totalPortfolioProfit() {
         return holdings.stream().filter(h -> !h.isOpen()).mapToDouble(SingleHolding::getProfit).sum()
-                + syntheticClosures.stream().mapToDouble(SingleHolding::getProfit).sum();
+             + syntheticClosures.stream().mapToDouble(SingleHolding::getProfit).sum();
     }
 
-    public double getProfit() {
-        return recentProfit;
-    }
-
+    public double getProfit() { return recentProfit; }
     public boolean hasHolding(String symbol) {
         return holdings.stream().anyMatch(h -> h.getSymbol().equals(symbol) && h.isOpen());
     }
-
     public int getNumShares(String symbol) {
-        return holdings.stream().filter(h -> h.isOpen() && h.getSymbol().equals(symbol))
-                .mapToInt(SingleHolding::getNumShares).sum();
+        return holdings.stream().filter(h -> h.isOpen() && h.getSymbol().equals(symbol)).mapToInt(SingleHolding::getNumShares).sum();
     }
-
     public double getAvgCost(String symbol) {
         int totalShares = 0;
         double totalCost = 0.0;
@@ -129,7 +117,6 @@ public class AllHoldings {
         }
         return (totalShares == 0) ? 0.0 : totalCost / totalShares;
     }
-
     public ArrayList<SingleHolding> getAllHoldings() {
         ArrayList<SingleHolding> all = new ArrayList<>(holdings);
         all.addAll(syntheticClosures);

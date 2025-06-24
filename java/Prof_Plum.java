@@ -4,8 +4,10 @@ import java.util.*;
 public class Prof_Plum {
     private static final String FILE_PATH = "..\\data\\plum.txt";
 
+    // ZS UPDATE
     //  MODES
     private final boolean DEBUG_MODE = true;
+    // END ZS UPDATE
 
     // Map<Symbol, Map<Variable, Map<DayNum, Value>>>
     private Map<String, Map<String, Map<Integer, Double>>> data;
@@ -14,35 +16,35 @@ public class Prof_Plum {
         data = new HashMap<>();
     }
 
-    public void setValue(String symbol, String variable, int dayNum, double value) {
-        data.computeIfAbsent(symbol, k -> new HashMap<>())
-                .computeIfAbsent(variable, k -> new HashMap<>())
-                .put(dayNum, value);
+public void setValue(String symbol, String variable, int dayNum, double value) {
+    data.computeIfAbsent(symbol, k -> new HashMap<>())
+        .computeIfAbsent(variable, k -> new HashMap<>())
+        .put(dayNum, value);
 
-        // Auto-save to file after every update
-        saveToFile();
-    }
+    // Auto-save to file after every update
+    saveToFile();
+}
 
-    public Double getValue(String symbol, String variable, int dayNum) {
-        Map<String, Map<Integer, Double>> symbolData = data.get(symbol);
-        if (symbolData != null) {
-            Map<Integer, Double> varData = symbolData.get(variable);
-            if (varData != null) {
-                Double value = varData.get(dayNum);
-                if (value != null) {
-                    return value;
-                }
+
+public Double getValue(String symbol, String variable, int dayNum) {
+    Map<String, Map<Integer, Double>> symbolData = data.get(symbol);
+    if (symbolData != null) {
+        Map<Integer, Double> varData = symbolData.get(variable);
+        if (varData != null) {
+            Double value = varData.get(dayNum);
+            if (value != null) {
+                return value;
             }
         }
-
-        // Return sentinel defaults for high and low
-        if (variable.equals("high"))
-            return -999.99;
-        if (variable.equals("low"))
-            return 999.99;
-
-        return null;
     }
+
+    // Return sentinel defaults for high and low
+    if (variable.equals("high")) return -999.99;
+    if (variable.equals("low"))  return 999.99;
+
+    return null;
+}
+
 
     public void saveToFile() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH))) {
@@ -77,29 +79,33 @@ public class Prof_Plum {
             System.err.println("Error reading from file: " + e.getMessage());
         }
     }
-
+    
+    
+    
     public void updateStatistics(String symbol, int dayNum, double currentPrice) {
+    Double currentHigh = getValue(symbol, "high", dayNum);
+    Double currentLow  = getValue(symbol, "low", dayNum);
 
-        Double currentHigh = getValue(symbol, "high", dayNum);
-        Double currentLow = getValue(symbol, "low", dayNum);
-
-        // If no high or low exists yet, initialize both to currentPrice
-        if (currentHigh == null || currentLow == null) {
-            setValue(symbol, "high", dayNum, currentPrice);
-            setValue(symbol, "low", dayNum, currentPrice);
-            return;
-        }
-
-        if (currentPrice > currentHigh) {
-            setValue(symbol, "high", dayNum, currentPrice);
-        }
-
-        if (currentPrice < currentLow) {
-            setValue(symbol, "low", dayNum, currentPrice);
-        }
+    // If no high or low exists yet, initialize both to currentPrice
+    if (currentHigh == null || currentLow == null) {
+        setValue(symbol, "high", dayNum, currentPrice);
+        setValue(symbol, "low", dayNum, currentPrice);
+        return;
     }
 
-    public void clearFile() {
+    if (currentPrice > currentHigh) {
+        setValue(symbol, "high", dayNum, currentPrice);
+    }
+
+    if (currentPrice < currentLow) {
+        setValue(symbol, "low", dayNum, currentPrice);
+    }
+}
+
+
+
+
+  public void clearFile() {
         try (PrintWriter writer = new PrintWriter(new FileWriter(FILE_PATH))) {
             // Truncate file by writing nothing
         } catch (IOException e) {
@@ -107,7 +113,7 @@ public class Prof_Plum {
         }
     }
 
-
+    // ZS UPDATE
     //  Zach's trend stuff
     private Deque<Quote> quotes = new ArrayDeque<>();
     private final int MAX_TREND_SIZE = 4;
@@ -253,9 +259,39 @@ public class Prof_Plum {
                 break;
             }
         }
-        System.out.println("DEQUE DAY AVERAGES: ");
+        if(DEBUG_MODE) System.out.println("DEQUE DAY AVERAGES: ");
         for(Quote i : quotes) {
             System.out.println(IOColors.BLUE + (i.getHigh() + i.getLow())/2 + IOColors.RESET);
         }
     }
+
+    // END ZS UPDATE
+    
+    
+    
+    
+    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+    
+        for (String symbol : data.keySet()) {
+            Map<String, Map<Integer, Double>> variableMap = data.get(symbol);
+            for (String variable : variableMap.keySet()) {
+                Map<Integer, Double> dayNumMap = variableMap.get(variable);
+                for (Map.Entry<Integer, Double> entry : dayNumMap.entrySet()) {
+                    int dayNum = entry.getKey();
+                    double value = entry.getValue();
+                    sb.append(String.format("%s[%d] = %.4f, ", variable, dayNum, value));
+                }
+            }
+        }
+    
+        return sb.toString();
+    }
+
+    
+    
+    
+    
 }
